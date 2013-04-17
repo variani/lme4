@@ -1,0 +1,11 @@
+blme/lme4 notes
+===============
+
+[b][g]lmer
+
+# Currently available covariance priors in blme
+- none
+- spectral
+- correlation
+
+
