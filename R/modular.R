@@ -235,7 +235,7 @@ glFormula <- function(formula, data=NULL, family = gaussian,
     if (is.character(family))
         family <- get(family, mode = "function", envir = parent.frame(2))
     if( is.function(family)) family <- family()
-    if (isTRUE(all.equal(family, gaussian()))) {
+    if (FALSE * isTRUE(all.equal(family, gaussian()))) {
         mc[[1]] <- as.name("lFormula")
         mc["family"] <- NULL            # to avoid an infinite loop
         return(eval(mc, parent.frame()))

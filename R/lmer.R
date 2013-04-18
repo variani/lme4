@@ -283,7 +283,7 @@ glmer <- function(formula, data=NULL, family = gaussian, sparseX = FALSE,
     if (is.character(family))
         family <- get(family, mode = "function", envir = parent.frame(2))
     if( is.function(family)) family <- family()
-    if (isTRUE(all.equal(family, gaussian()))) {
+    if (FALSE & isTRUE(all.equal(family, gaussian()))) {
         warning("calling glmer() with family=gaussian (identity link) as a shortcut to lmer() is deprecated;",
                 " please call lmer() directly")
         mc[[1]] <- as.name("lmer")
