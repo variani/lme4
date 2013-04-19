@@ -213,15 +213,25 @@ Maybe some progress by setting the weights to be equal to the estimated residual
 
 This gets the fixed effect standard errors much better as well as the random effects variances.  However, the random effects variances are far from perfect, and the random effects correlation is still way off.
 
+The random effect point estimates are really similar:
+
+```r
+plot(ranef(fm6)$Subject[, 1], ranef(fm7)$Subject[, 1])
+abline(a = 0, b = 1)
+```
+
+![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-6.png) 
+
 
 Further experimentation:
+------------------------
 
 ```r
 plot(ranef(fm1)$Subject[, 1], ranef(fm2)$Subject[, 1])
 abline(a = 0, b = 1)
 ```
 
-![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-6.png) 
+![plot of chunk unnamed-chunk-7](figure/unnamed-chunk-7.png) 
 
 ```r
 
@@ -247,7 +257,7 @@ rho$resp$Laplace
 ##     "returns the Laplace approximation to the profiled deviance"
 ##     .Call(glm_Laplace, ptr(), ldL2, ldRX2, sqrL)
 ## }
-## <environment: 0x109622118>
+## <environment: 0x1089180a8>
 ## 
 ##  Methods used:  
 ##     "ptr"
