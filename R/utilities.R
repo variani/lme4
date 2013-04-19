@@ -551,13 +551,23 @@ mkMerMod <- function(rho, opt, reTrms, fr, mc) {
         pars <- opt$par
         if (length(pars) > length(pp$theta)) beta <- pars[-(seq_along(pp$theta))]
     }
+    if(rcl=="glmResp"){
+      if(rho$resp$family$family=="gaussian"){
+        sigmaML <- sqrt(unname(wrss/n))
+      }else{
+        sigmaML <- NA
+      }
+    }else{
+      sigmaML <- sqrt(unname(pwrss/dims['n']))
+    }
     cmp <- c(ldL2=pp$ldL2(), ldRX2=pp$ldRX2(), wrss=wrss,
              ussq=sqrLenU, pwrss=pwrss,
              drsum=if (rcl=="glmResp") resp$resDev() else NA,
              REML=if (rcl=="lmerResp" && resp$REML != 0L) opt$fval else NA,
              ## FIXME: construct 'REML deviance' here?
              dev=if (rcl=="lmerResp" && resp$REML != 0L) NA else opt$fval,
-             sigmaML=sqrt(unname(if (rcl=="glmResp") NA else pwrss/dims['n'])),
+             #sigmaML=sqrt(unname(if (rcl=="glmResp") NA else pwrss/dims['n'])),
+             sigmaML=sigmaML,
              sigmaREML=sqrt(unname(if (rcl!="lmerResp") NA else pwrss/dims['nmp'])),
              tolPwrss=rho$tolPwrss)
     # TODO:  improve this hack to get something in frame slot (maybe need weights, etc...)
