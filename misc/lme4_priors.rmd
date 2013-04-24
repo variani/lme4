@@ -1,0 +1,74 @@
+Priors on variance-covariance matrices
+========================================================
+
+The [`blme` package](http://cran.r-project.org/web/packages/blme/) by Vincent Dorie performs the useful task of imposing priors on the parameters of mixed-model fits executed by `lme4`. In particular, it allows for Wishart priors on the variance-covariance matrix of the random effects.
+
+Rather than implement my own Wishart distribution function, I'll take one from the `LaplacesDemon` package (according to `sos::findFn("dwishart")`, there's also one in the `mixAK` package). (The density function is not very complicated to implement, and might even be implementable in terms of the Cholesky factor of the variance-covariance matrix, which would make it marginally more efficient in the context of `lme4`, but for now it's more efficient to steal rather than reinvent the wheel.)
+
+Replicating the sequence from `?modular` (in the development version of `lme4`):
+```{r calc1,message=FALSE}
+library("lme4")
+## 1. Parse the data and formula:
+lmod <- lFormula(Reaction ~ Days + (Days|Subject), sleepstudy)
+## 2.  Create the deviance function to be optimized:
+devfun <- do.call(mkLmerDevfun, lmod)
+## 3.  Optimize the deviance function:
+opt <- optimizeLmer(devfun,verbose=TRUE)
+## 4.  Package up the results:
+fit1 <- mkMerMod(environment(devfun), opt, lmod$reTrms, fr = lmod$fr)
+```
+
+Now impose a prior: `blme` uses
+
+> for a grouping factor of dimension $K$, `df` = $K + 3$. When the mode of the distribution exists, the `scale` is chosen to set the mode equal 10^{-2} times the identity matrix. When the mode does not exist, the mean is set to that value.
+
+```{r calc2,message=FALSE}
+make_vc <- function(theta,n0) {
+  m <- matrix(0,nrow=n0,ncol=n0)
+  m[lower.tri(m,diag=TRUE)] <- theta
+  m %*% t(m)
+}
+library("LaplacesDemon")
+mkPriorDevfun <- function(devfun,pstr=1e-2,nu=NULL,debug=FALSE) {
+  e2 <- deep_copy(environment(devfun))
+  assign("nu",nu,env=e2)
+  assign("pstr",pstr,env=e2)
+  assign("debug",debug,env=e2)
+  devfun2 <- function(theta) {
+     d <- devfun(theta)
+     n <- length(theta)
+     n0 <- (-1 + sqrt(1+8*n))/2  ## dimension
+     if (is.null(nu)) nu <- n0+3
+     logprior <- try(dwishart(make_vc(theta,n0),nu=nu,S=diag(n0)*pstr/nu,log=TRUE),
+               silent=TRUE)
+     if (inherits(logprior,"try-error")) {
+       print(theta)
+       stop("non-pos-def VC matrix")
+     }
+     d2 <- d - 2*logprior
+     cat(theta,logprior,d,d2,"\n")
+     d2
+  }
+  environment(devfun2) <- e2
+  devfun2
+}
+deep_copy <- function(e1) {
+  e2 <- new.env()
+  for(n in ls(e1, all.names=TRUE))
+    assign(n, get(n, e1), e2)
+  e2
+}
+## note that we are copying the devfun environment *after* the model is fitted
+optimizeLmer(mkPriorDevfun(devfun,debug=TRUE),verbose=TRUE)
+```
+
+**Snag 1**: we need to be able to compute the Wishart even when the variance-covariance matrix is only positive *semidefinite* ... although I'm not sure there's not another bug in here somewhere, as I'm surprised that the optimization even hits the boundary in this case ...
+
+**To do**:
+* create a "penalized deviance function constructor" that allows modification of prior strength etc..
+* try with a very weak prior and see if we get back (close to) the `lmer` answer (i.e. do we only hit positive semi-definite cases for stronger priors? or am I still just chasing a boneheaded bug?  Did I get the model specification right?)
+
+```{r}
+devfun <- do.call(mkLmerDevfun, lmod)
+optimizeLmer(mkPriorDevfun(devfun,debug=TRUE,pstr=1e-7),verbose=TRUE)
+```
