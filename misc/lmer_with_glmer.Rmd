@@ -1,0 +1,127 @@
+Using `glmer` to fit LMMs
+=========================
+
+Using the `blme` branch of development `lme4`, which doesn't dispatch `lmer` when `glmer` with `family=gaussian` is called.
+```{r}
+library(lme4)
+sleepstudy$obs <- as.factor(seq_len(nrow(sleepstudy)))
+```
+
+However, note that `lmer` and `glmer` don't give identical results (except for fixed effect point estimates):
+```{r}
+(fm1 <- lmer (Reaction ~ Days + (Days|Subject), sleepstudy))
+(fm2 <- glmer(Reaction ~ Days + (Days|Subject), sleepstudy, family = gaussian))
+```
+
+The approach of using observation-level random effects doesn't work either:
+```{r}
+(fm3 <- glmer(Reaction ~ Days + (Days|Subject) + (1|obs), sleepstudy, family = gaussian))
+```
+
+But at least this approach works when there are no other random effects:
+```{r}
+(fm4 <- glmer(Reaction ~ Days + (1|obs), sleepstudy, family = gaussian))
+(fm5 <- lm(Reaction ~ Days, sleepstudy))
+```
+
+Maybe some progress by setting the weights to be equal to the estimated residual variance from a `REML=FALSE` `lmer` fit:
+```{r}
+(fm6 <- lmer (Reaction ~ Days + (Days|Subject), sleepstudy, REML = FALSE))
+(fm7 <- glmer(Reaction ~ Days + (Days|Subject), sleepstudy, family = gaussian, weights = rep(1/654.94, nrow(sleepstudy))))
+```
+This gets the fixed effect standard errors much better as well as the random effects variances.  However, the random effects variances are far from perfect, and the random effects correlation is still way off.
+
+The random effect point estimates are really similar:
+```{r}
+plot(ranef(fm6)$Subject[,1], ranef(fm7)$Subject[,1])
+abline(a = 0, b = 1)
+```
+
+Further experimentation:
+------------------------
+```{r}
+plot(ranef(fm1)$Subject[,1], ranef(fm2)$Subject[,1])
+abline(a = 0, b = 1)
+
+lmod <- lFormula(Reaction ~ Days + (Days|Subject), sleepstudy)
+devfun <- do.call(mkLmerDevfun, lmod)
+opt <- optimizeLmer(devfun)
+rho <- environment(devfun)
+
+
+glmod <- glFormula(Reaction ~ Days + (Days|Subject), sleepstudy, family = gaussian)
+devfun <- do.call(mkGlmerDevfun, glmod)
+opt <- optimizeGlmer(devfun)
+devfun <- updateGlmerDevfun(devfun, glmod$reTrms)
+opt <- optimizeGlmer(devfun, stage=2)
+rho <- environment(devfun)
+rho$resp$Laplace
+
+
+devfun(rho$pp$theta)
+devfun(rho$pp$theta)
+
+```
+
+Where does `useSc` occur?
+-------------------------
+
+### lmer.R
+
+#### logLik.merMod
+line 952:
+`attr(val, "df") <- length(object@beta) + length(object@theta) + dims[["useSc"]]`
+
+#### refitML.merMod
+line 1192:
+`dims <- c(N=n, n=n, nmp=n-p, nth=length(pp$theta), p=p, q=nrow(pp$Zt), nAGQ=NA_integer_, useSc=1L, reTrms=length(x@cnms), spFe=0L, REML=0L, GLMM=0L, NLMM=0L)`
+
+#### sigma.merMod
+line 1252:
+`if(dd[["useSc"]]) dc$cmp[[if(dd[["REML"]]) "sigmaREML" else "sigmaML"]] else 1.`
+
+#### VarCorr.merMod
+line 1817:
+`attr(m,"useSc") <- as.logical(x@devcomp$dims["useSc"])`
+
+#### summary.merMod
+line 1882:
+`useSc <- as.logical(dd["useSc"])`
+
+line 1895:
+`colnames(coefs)[3] <- paste(if(useSc) "t" else "z", "value")`
+
+line 1918
+`structure(list(methTitle=mName, devcomp=devC, isLmer=is(resp, "lmerResp"), useScale=useSc, logLik=llik, family=fam, link=link, ngrps=sapply(object@flist, function(x) length(levels(x))), coefficients=coefs, sigma=sig, vcov=vcov(object, correlation=TRUE, sigm=sig), varcor=varcor, AICtab=AICstats, call=object@call), class = "summary.merMod") # and use formatVC(.) for printing. `
+
+### profile.R
+
+#### profile.merMod
+line 73:
+`useSc <- isLMM(fitted) || isNLMM(fitted)`
+
+line 74:
+`dd <- devfun2(fitted,useSc)`
+
+line 180:
+`if (useSc) {lower <- c(lower,0); upper <- c(upper,Inf)}`
+
+#### devfun2
+line 355:
+`devfun2 <- function(fm,useSc=TRUE)`
+
+line 403:
+ `## FIXME: allow useSc (i.e. NLMMs)`
+            if (!useSc) {
+                thpars <- Sv_to_Cv(pars[seq(np)],n=vlist)
+            } else {
+                thpars <- Sv_to_Cv(pars[seq(np)],n=vlist,s=pars[np])
+            }
+
+
+
+### utilities.R
+
+#### mkMerMod
+line 538:
+`dims <- c(N=nrow(pp$X), n=n, p=p, nmp=n-p, nth=length(pp$theta), q=nrow(pp$Zt), nAGQ=rho$nAGQ,compDev=rho$compDev, useSc=(rcl != "glmResp"), reTrms=length(reTrms$cnms), spFe=0L,REML=if (rcl=="lmerResp") resp$REML else 0L,  GLMM=(rcl=="glmResp"), NLMM=(rcl=="nlsResp"))## FIXME: need to consider GLM families with estimated scale parameter!`
