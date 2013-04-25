@@ -1,3 +1,4 @@
+## find maximum of  a _vector_ of package versions
 pkgmax <- function(x,y) {
     if (missing(y)) {
         if (length(x)==1) return(x)
@@ -7,10 +8,12 @@ pkgmax <- function(x,y) {
 }
 
 
-checkPkg <- function(pn,verbose=FALSE,tarballdir="./tarballs",libdir="./library",
-                     checkdir=".",skip=FALSE) {
+checkPkg <- function(pn,verbose=FALSE,
+                     tarballdir=file.path(getwd(),"tarballs"),
+                     libdir=file.path(getwd(),"library"),
+                     checkdir=getwd(),
+                     skip=FALSE) {
     ## FIXME: check for/document local version of tarball more recent than R-forge/CRAN versions
-    ## FIXME: consistent implementation of checkdir
     rforge <- "http://r-forge.r-project.org"  
     if (!exists("availCRAN")) {
         if (verbose) cat("getting list of available packages from CRAN\n")
@@ -65,27 +68,26 @@ checkPkg <- function(pn,verbose=FALSE,tarballdir="./tarballs",libdir="./library"
                            loc=stop("tarball not available"))
         download.file(file.path(basepath,tn),
                       destfile=tdn)
-        ## install suggested packages that aren't already installed
-        depList <- lapply(c("Suggests","Depends"),
-                         tools:::package.dependencies,
-                         x=pkginfo,
-                         check=FALSE)
-        depList <- unlist(lapply(depList,function(x) {
-            if (!is.matrix(x[[1]])) character(0) else x[[1]][,1] }))
-        depMiss <- setdiff(depList,c("R",rownames(instPkgs)))
-        if (length(depMiss)>0) {
-            if (verbose) cat("installing dependencies",depMiss,"\n")
-            install.packages(depMiss,lib=libdir)
-            rPath <- if (loc=="CRAN") getOption("repos") else c(rforge,getOption("repos"))
-            instPkgs <- installed.packages(noCache=TRUE,lib.loc=libdir)  ## update installed package info
-        }
+    }
+    ## install suggested packages that aren't already installed
+    depList <- lapply(c("Suggests","Depends","Imports"),
+                      tools:::package.dependencies,
+                      x=pkginfo,
+                      check=FALSE)
+    depList <- unlist(lapply(depList,function(x) {
+        if (!is.matrix(x[[1]])) character(0) else x[[1]][,1] }))
+    depMiss <- setdiff(depList,c("R",rownames(instPkgs)))
+    if (length(depMiss)>0) {
+        if (verbose) cat("installing dependencies",depMiss,"\n")
+        install.packages(depMiss,lib=libdir)
+        rPath <- if (loc=="CRAN") getOption("repos") else c(rforge,getOption("repos"))
+        instPkgs <- installed.packages(noCache=TRUE,lib.loc=libdir)  ## update installed package info
     }
     ## must have set check.Renviron here in order for R CMD check to respect libdir
     if (verbose) cat("running R CMD check ...\n")
     unlink(file.path(checkdir,paste0(pn,".Rcheck")))  ## erase existing check directory
-    ## FIXME: run R CMD check in checkdir ...
     if (!skip) {
-        tt <- system.time(ss <- suppressWarnings(system(paste("R CMD check",
+        tt <- system.time(ss <- suppressWarnings(system(paste("cd",checkdir,"; R CMD check",
                                                               file.path(tarballdir,tn)),
                                                         intern=TRUE)))
         if (verbose) print(ss)

@@ -10,13 +10,18 @@ verbose <- TRUE
 ## in non-interactive mode ...
 options(repos=c(CRAN="http://probability.ca/cran"))
 pkg <- "lme4"
-do_parallel <- TRUE
+do_parallel <- FALSE
 testdir <- getwd()
 tarballdir <- file.path(testdir,"tarballs")
 libdir <-     file.path(testdir,"library")
 checkdir <-     file.path(testdir,"check")
-reinstall_pkg <- FALSE
+reinstall_pkg <- TRUE
 locpkg <- "lme4_0.99999911-2.tar.gz"
+
+## make directories ...
+dir.create(tarballdir,showWarnings=FALSE)
+dir.create(libdir,showWarnings=FALSE)
+dir.create(checkdir,showWarnings=FALSE)
 
 ## FIXME: should get these straight from DESCRIPTION file
 pkgdep <- c("Rcpp","RcppEigen","minqa")
@@ -63,9 +68,6 @@ suppressWarnings(rm(list=c("availCRAN","availRforge"))) ## clean up
 
 ## require(tools)
 
-## make directories ...
-dir.create(tarballdir,showWarnings=FALSE)
-dir.create(libdir,showWarnings=FALSE)
 ## want to install additional dependencies etc. out of the way
 ## to keep original installed base clean, but this may not be feasible
 ## it would be nice to use tools:::testInstalledPackages(), but I may simply
@@ -92,9 +94,9 @@ if (do_parallel) {
 ## FIXME: not sure this is necessary/functional
 testresults <- Apply(pkgnames,function(x) {
     if (verbose) cat("checking package",x,"\n")
-    try(checkPkg(x,verbose=TRUE))
+    try(checkPkg(x,verbose=TRUE,checkdir=checkdir))
 })
-skipresults <- Apply(skippkgs,function(x) try(checkPkg(x,skip=TRUE,verbose=TRUE)))
+skipresults <- Apply(skippkgs,function(x) try(checkPkg(x,skip=TRUE,verbose=TRUE,checkdir=checkdir)))
 testresults <- c(testresults,skipresults)
 
 save("testresults",file="pkgtests_out.RData")
