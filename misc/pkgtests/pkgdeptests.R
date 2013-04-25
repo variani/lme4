@@ -1,4 +1,4 @@
-## code for testing lme4 downstream packages
+*## code for testing lme4 downstream packages
 ##
 ## include all downstream packages from CRAN, r-forge:
 ## packages to check, loaded from package-dependency scan
@@ -15,18 +15,23 @@ testdir <- getwd()
 tarballdir <- file.path(testdir,"tarballs")
 libdir <-     file.path(testdir,"library")
 checkdir <-     file.path(testdir,"check")
-reinstall_pkg <- TRUE
+reinstall_pkg <- FALSE
 locpkg <- "lme4_0.99999911-2.tar.gz"
+## packages to skip (because dependencies don't install etc.
+## skippkgs <- "polytomous"
+skippkgs <- character(0)
 
 ## make directories ...
 dir.create(tarballdir,showWarnings=FALSE)
 dir.create(libdir,showWarnings=FALSE)
 dir.create(checkdir,showWarnings=FALSE)
 
-## FIXME: should get these straight from DESCRIPTION file
+## FIXME: should get these dependencies straight from the DESCRIPTION file
 pkgdep <- c("Rcpp","RcppEigen","minqa")
+itmp <- installed.packages()
+builtinPkgs <- rownames(itmp)[!is.na(itmp[,"Priority"])]
 instPkgs <- installed.packages(lib.loc=libdir,noCache=TRUE)
-pkgdepMiss <- setdiff(pkgdep,c("R",rownames(instPkgs)))
+pkgdepMiss <- setdiff(pkgdep,c("R",builtinPkgs,rownames(instPkgs)))
 if (length(pkgdepMiss)>0)
     install.packages(pkgdepMiss,lib=libdir)
 
@@ -35,15 +40,17 @@ if (reinstall_pkg) {
 }
                  
 if (verbose) cat("retrieving dependency information\n")
-source("http://developer.r-project.org/CRAN/Scripts/depends.R")
-## FIXME: should download a local copy of this, for future-proofing
-
+tt <- try(source("http://developer.r-project.org/CRAN/Scripts/depends.R"),
+          silent=TRUE)
+if (inherits(tt,"try-error")) {
+    if (file.exists("depends.R")) {
+        source("depends.R")
+    } else stop("can't find depends.R script")
+}
 rr <- reverse_dependencies_with_maintainers(pkg)
-source("lme4depfuns.R")  ## component/utility functions
-## packages to skip (because dependencies don't install etc.
-## skippkgs <- "polytomous"
-skippkgs <- character(0)
+source("pkgdepfuns.R")  ## component/utility functions
 
+## ** ?? would prefer not to !!
 ## * must export R_LIBS_SITE=./library before running R CMD BATCH
 ##   and  make sure that .R/check.Renviron is set
 ##   (this is done in the 'runtests' script)
@@ -61,13 +68,8 @@ skippkgs <- character(0)
 
 ## FIXME: why are R2admb, RLRsim, sdtalt, Zelig not getting checked?
 
-
-
-
 suppressWarnings(rm(list=c("availCRAN","availRforge"))) ## clean up
-
 ## require(tools)
-
 ## want to install additional dependencies etc. out of the way
 ## to keep original installed base clean, but this may not be feasible
 ## it would be nice to use tools:::testInstalledPackages(), but I may simply
@@ -107,5 +109,5 @@ if (FALSE) {
     checkPkg("HSAUR2")
 }
 ## names(testresults) <- X$X  ## should be obsolete after next run
-genReport(X,testresults)
+## genReport(X,testresults)
 

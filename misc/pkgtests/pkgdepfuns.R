@@ -12,7 +12,8 @@ checkPkg <- function(pn,verbose=FALSE,
                      tarballdir=file.path(getwd(),"tarballs"),
                      libdir=file.path(getwd(),"library"),
                      checkdir=getwd(),
-                     skip=FALSE) {
+                     skip=FALSE,
+                     pkgname="lme4") {
     ## FIXME: check for/document local version of tarball more recent than R-forge/CRAN versions
     rforge <- "http://r-forge.r-project.org"  
     if (!exists("availCRAN")) {
@@ -25,32 +26,33 @@ checkPkg <- function(pn,verbose=FALSE,
     }
     ## FIXME: maybe this is not effective/not what we want to do?
     ##  *don't* want to look at any already-installed packages
-    .libPaths(libdir) 
+    ## .libPaths(libdir) 
     ## we definitely want this to check for packages in the local library directory;
-    ## not sure if we want to check in the rest of the standard library paths
+    ## not sure if we want to check in the rest of the standard library paths ... ???
+    ## need to check 'base R' stuff
     instPkgs <- installed.packages(lib.loc=libdir)
     if (verbose) cat("checking package",pn,"\n")
     loc <- "none"  ## where is the package coming from?
     if (pn %in% rownames(availRforge)) {
         ## if available at R-forge ... take the R-forge version
-        loc <- "Rforge"
+        loc <- "R-forge"
+        allpkginfo <- availRforge
         pkginfo <- availRforge[pn,]
     } else if (pn %in% rownames(availCRAN)) {
         loc <- "CRAN"
+        allpkginfo <- availCRAN
         pkginfo <- availCRAN[pn,]
     }
-    ## FIXME: look for local tarballs???
     locpkg <- list.files(tarballdir,paste0("^",pn))
     if (length(locpkg)>0) {
         locver <- gsub(paste0(pn,"_([-0-9.]+).tar.gz"),"\\1",locpkg)
     } else locver <- NULL
     if (loc=="none" && is.null(locver)) stop("package seems to be unavailable")
-    ver <- pkginfo["Version"]  ## FIXME: check that tarball matches latest available???
+    ver <- pkginfo["Version"]
     if (!is.null(locver)) {
         if (length(locver)>1) {
             locver <- pkgmax(locver)
         }
-        ## FIXME: could figure out most recent version?
         if (package_version(locver)>package_version(ver)) {
             ver <- locver
             loc <- "local"
@@ -60,8 +62,7 @@ checkPkg <- function(pn,verbose=FALSE,
     ## FIXME: can we safely assume if the file is in 'available.packages(Rforge)' that
     ##   the tarball is really there??
     tn <- paste0(pn,"_",ver,".tar.gz")
-    if (loc!="local" && !file.exists(tdn <- file.path(tarballdir,tn)))
-    {
+    if (loc!="local" && !file.exists(tdn <- file.path(tarballdir,tn))) {
         if (verbose) cat("downloading tarball\n")
         basepath <- switch(loc,CRAN=contrib.url(getOption("repos")),
                            Rforge=contrib.url(rforge),
@@ -70,13 +71,18 @@ checkPkg <- function(pn,verbose=FALSE,
                       destfile=tdn)
     }
     ## install suggested packages that aren't already installed
-    depList <- lapply(c("Suggests","Depends","Imports"),
-                      tools:::package.dependencies,
-                      x=pkginfo,
-                      check=FALSE)
-    depList <- unlist(lapply(depList,function(x) {
-        if (!is.matrix(x[[1]])) character(0) else x[[1]][,1] }))
-    depMiss <- setdiff(depList,c("R",rownames(instPkgs)))
+    ## FIXME:  how do I find LinkingTo: ?? see HLMdiag / RcppArmadillo
+    ## depList <- lapply(c("Suggests","Depends","Imports"),
+    ## tools:::package.dependencies,
+    ## x=pkginfo,
+    ## check=FALSE)
+    ## flatten list
+    ##depList <- unlist(lapply(depList,function(x) {
+    ## if (!is.matrix(x[[1]])) character(0) else x[[1]][,1] }))
+    depList <- package_dependencies(pn,allpkginfo,which="most")[[1]]
+    itmp <- installed.packages()
+    builtinPkgs <- rownames(itmp)[!is.na(itmp[,"Priority"])]
+    depMiss <- setdiff(depList,c("R",builtinPkgs,rownames(instPkgs)))
     if (length(depMiss)>0) {
         if (verbose) cat("installing dependencies",depMiss,"\n")
         install.packages(depMiss,lib=libdir)
@@ -148,8 +154,9 @@ procError <- function(z,pkgname=NULL,debug=FALSE) {
 
 genReport <- function(X,testresults,
                       contact="lme4-authors <at> r-forge.wu-wien.ac.at",
-                      verbose=FALSE) {
-    require(lme4)  ## for lme4 package version  (FIXME: should be stored with test results!)
+                      verbose=FALSE,
+                      pkg="lme4") {
+    require(pkg,character.only=TRUE)  ## for package version  (FIXME: should be stored with test results!)
     ## FIXME: should store/pull date from test results too
     require(R2HTML)
     
@@ -177,11 +184,11 @@ genReport <- function(X,testresults,
     rpt$maintainer <- dumbBrackets(rpt$maintainer)
 
     ## write file
-    HTMLInitFile(filename="lme4_compat_report",outdir=".",
-                 Title="lme4 downstream package report")
+    HTMLInitFile(filename=paste0(pkg,"_compat_report"),outdir=".",
+                 Title=paste(pkg,"downstream package report"))
     HTML("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">")  ## for special chars in names etc.
-    HTML.title("downstream lme4 package test report",HR=1)
-    HTML(paste("lme4 version: ",dumbQuotes(packageVersion(sessionInfo()$otherPkgs$lme4))))
+    HTML.title(paste("downstream",pkg,"package test report"),HR=1)
+    HTML(paste(pkg,"version: ",dumbQuotes(packageVersion(sessionInfo()$otherPkgs$lme4))))
     HTML(paste("Test date: ",date()))
     HTML.title("Notes",HR=2)
     HTML("<ul>")
