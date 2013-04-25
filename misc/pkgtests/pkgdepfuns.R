@@ -79,7 +79,7 @@ checkPkg <- function(pn,verbose=FALSE,
     ## flatten list
     ##depList <- unlist(lapply(depList,function(x) {
     ## if (!is.matrix(x[[1]])) character(0) else x[[1]][,1] }))
-    depList <- package_dependencies(pn,allpkginfo,which="most")[[1]]
+    depList <- package_dependencies(pn,allpkginfo,which="most",recursive=TRUE)[[1]]
     itmp <- installed.packages()
     builtinPkgs <- rownames(itmp)[!is.na(itmp[,"Priority"])]
     depMiss <- setdiff(depList,c("R",builtinPkgs,rownames(instPkgs)))
