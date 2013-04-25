@@ -1,4 +1,4 @@
-*## code for testing lme4 downstream packages
+## code for testing lme4 downstream packages
 ##
 ## include all downstream packages from CRAN, r-forge:
 ## packages to check, loaded from package-dependency scan

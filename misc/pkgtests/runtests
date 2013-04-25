@@ -10,7 +10,7 @@ echo "R_LIBS_USER=`pwd`/library" >> ~/.R/check.Renviron
 ## export R_LIBS_SITE=`pwd`/library
 ## export R_LIBS_USER=`pwd`/library
 ## run tests
-R CMD BATCH --vanilla lme4deptests.R
+R CMD BATCH --vanilla pkgdeptests.R
 ## tear down testing environment
 rm ~/.R/check.Renviron
 ## cleanup
