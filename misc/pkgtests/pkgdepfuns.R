@@ -65,7 +65,7 @@ checkPkg <- function(pn,verbose=FALSE,
     if (loc!="local" && !file.exists(tdn <- file.path(tarballdir,tn))) {
         if (verbose) cat("downloading tarball\n")
         basepath <- switch(loc,CRAN=contrib.url(getOption("repos")),
-                           Rforge=contrib.url(rforge),
+                           `R-forge`=contrib.url(rforge),
                            loc=stop("tarball not available"))
         download.file(file.path(basepath,tn),
                       destfile=tdn)
