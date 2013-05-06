@@ -520,9 +520,9 @@ extern "C" {
     }
 	
     SEXP isNullExtPtr(SEXP Ptr) {
-	BEGIN_RCPP;
-	return ::Rf_ScalarLogical(XPtr<lmResp>(Ptr) == (lmResp*)NULL);
-	END_RCPP;
+	void *ptr = R_ExternalPtrAddr(Ptr);
+	Rcpp::Rcout << "In isNullExtPtr, address is " << ptr << std::endl;
+	return ::Rf_ScalarLogical(ptr == (void*)NULL);
     }
 
     // linear model response (also the base class for other response classes)
@@ -571,6 +571,7 @@ extern "C" {
 		     SEXP sqrtXwt, SEXP sqrtrwt, SEXP wtres) {
 	BEGIN_RCPP;
 	lmerResp *ans = new lmerResp(y, weights, offset, mu, sqrtXwt, sqrtrwt, wtres);
+	Rcpp::Rcout << "In lmer_Create, returned pointer is " << ans << std::endl;
 	return wrap(XPtr<lmerResp>(ans, true));
 	END_RCPP;
     }
@@ -593,16 +594,26 @@ extern "C" {
 
     static double lmer_dev(XPtr<merPredD> ppt, XPtr<lmerResp> rpt, const Eigen::VectorXd& theta) {
 	ppt->setTheta(theta);
+	Rcpp::Rcout << "In lmer_dev, after setTheta" << std::endl;
 	ppt->updateDecomp();
+	Rcpp::Rcout << "after updateDecomp" << std::endl;
         rpt->updateMu(ppt->linPred(0.));
+	Rcpp::Rcout << "after updateMu" << std::endl;
         ppt->updateRes(rpt->wtres());
+	Rcpp::Rcout << "after updateRes" << std::endl;
 	ppt->solve();
+	Rcpp::Rcout << "after solve" << std::endl;
         rpt->updateMu(ppt->linPred(1.));
+	Rcpp::Rcout << "after second updateMu" << std::endl;
 	return rpt->Laplace(ppt->ldL2(), ppt->ldRX2(), ppt->sqrL(1.));
     }
 
     SEXP lmer_Deviance(SEXP pptr_, SEXP rptr_, SEXP theta_) {
 	BEGIN_RCPP;
+	Rcpp::Rcout << "In lmer_Deviance, pptr address "
+		    << ::R_ExternalPtrAddr(pptr_)
+		    << ", rptr address "
+		    << ::R_ExternalPtrAddr(rptr_) << std::endl;
 	XPtr<lmerResp>   rpt(rptr_);
 	XPtr<merPredD>   ppt(pptr_);
 	return ::Rf_ScalarReal(lmer_dev(ppt, rpt, as<MVec>(theta_)));
@@ -633,6 +644,7 @@ extern "C" {
 	BEGIN_RCPP;
 	merPredD *ans = new merPredD(Xs, Lambdat, LamtUt, Lind, RZX, Ut, Utr, V, VtV,
 				     Vtr, Xwts, Zt, beta0, delb, delu, theta, u0);
+	Rcpp::Rcout << "In merPredDCreate, returned pointer is " << ans << std::endl;
 	return wrap(XPtr<merPredD>(ans, true));
 	END_RCPP;
     }
@@ -915,6 +927,39 @@ extern "C" {
 	return ::Rf_ScalarReal(XPtr<nlsResp>(ptr_)->updateMu(as<MVec>(gamma)));
 	END_RCPP;
     }
+
+    SEXP showlocation(SEXP obj) {
+	int ll = Rf_length(obj);
+	if (Rf_isReal(obj)) {
+	    double *vv = REAL(obj);
+	    Rcpp::Rcout << "Numeric vector of length " << ll
+			<< " at location: " << vv << std::endl;
+	    if (ll > 0) {
+		Rcpp::Rcout << "Values: " << vv[0];
+		for(int i = 1; i < std::min(ll, 5); ++i)
+		    Rcpp::Rcout << "," << vv[i];
+		if (ll > 8) Rcpp::Rcout << ",...,";
+		for (int i = std::max(5, ll - 3); i < ll; ++i)
+		    Rcpp::Rcout << "," << vv[i];
+		Rcpp::Rcout << std::endl;
+	    }
+	}
+	if (Rf_isInteger(obj)) {
+	    int *vv = INTEGER(obj);
+	    Rcpp::Rcout << "Numeric vector of length " << ll
+			<< " at location: " << vv << std::endl;
+	    if (ll > 0) {
+		Rcpp::Rcout << "Values: " << vv[0];
+		for(int i = 1; i < std::min(ll, 5); ++i)
+		    Rcpp::Rcout << "," << vv[i];
+		if (ll > 8) Rcpp::Rcout << ",...,";
+		for (int i = std::max(5,ll - 3); i < ll; ++i)
+		    Rcpp::Rcout << "," << vv[i];
+		Rcpp::Rcout << std::endl;
+	    }
+	}
+	return R_NilValue;
+    }
 }
 
 #include <R_ext/Rdynload.h>
@@ -1041,6 +1086,7 @@ static R_CallMethodDef CallEntries[] = {
     CALLDEF(nls_Laplace,        4), // methods
     CALLDEF(nls_updateMu,       2),
 
+    CALLDEF(showlocation,       1),
     {NULL, NULL, 0}
 };
 
