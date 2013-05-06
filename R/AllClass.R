@@ -114,6 +114,9 @@ merPredD <-
                          LamtUt <<- LtUt
                          Xw <- list(...)$Xwts
                          Xwts <<- if (is.null(Xw)) rep.int(1, N) else as.numeric(Xw)
+                         Ptr <<- .Call(merPredDCreate, as(X, "matrix"), Lambdat,
+                                       LamtUt, Lind, RZX, Ut, Utr, V, VtV, Vtr,
+                                       Xwts, Zt, beta0, delb, delu, theta, u0)
                          updateXwts(Xwts)
                      },
                      CcNumer      = function() {
@@ -452,6 +455,8 @@ lmerResp <-
                          REML <<- as.integer(list(...)$REML)
                          if (length(REML) != 1L) REML <<- 0L
                          callSuper(...)
+                         Ptr <<- .Call(lmer_Create, y, weights, offset, mu, sqrtXwt,
+                                       sqrtrwt, wtres)
                      },
                      ptr        = function() {
                          'returns the external pointer, regenerating if necessary'
