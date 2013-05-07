@@ -51,19 +51,16 @@ namespace lme4 {
 		    << ", d_V.data() " << d_V.data()
 		    << ", d_VtV.data() " << d_VtV.data()
 		    << ", d_Zt.valuePtr() " << d_Zt.valuePtr()
-		    << ", d_Ut.valuePtr() " << d_Ut.valuePtr()
-		    << std::endl
-		    << ", d_Lambdat.valuePtr() " << d_Lambdat.valuePtr()
+		    << ", d_Ut.valuePtr()," << d_Ut.valuePtr() << std::endl
+		    << "d_Lambdat.valuePtr() " << d_Lambdat.valuePtr()
 		    << ", d_theta.data() " << d_theta.data()
 		    << ", d_Vtr.data() " << d_Vtr.data()
 		    << ", d_Utr.data() " << d_Utr.data()
-		    << ", d_Xwts.data() " << d_Xwts.data()
-		    << std::endl
-		    << ", d_beta0.data() " << d_beta0.data()
+		    << ", d_Xwts.data()," << d_Xwts.data() << std::endl
+		    << "d_beta0.data() " << d_beta0.data()
 		    << ", d_delb.data() " << d_delu.data()
 		    << ", d_u0.data() " << d_u0.data()
-		    << ", d_Lind.data() " << d_u0.data()
-		    << std::endl;
+		    << ", d_Lind.data()" << d_Lind.data() << std::endl;
 	if (d_N != d_Zt.cols())
 	    throw invalid_argument("Z dimension mismatch");
 	if (d_Lind.size() != d_Lambdat.nonZeros())
