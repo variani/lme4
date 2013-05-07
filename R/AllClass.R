@@ -114,9 +114,6 @@ merPredD <-
                          LamtUt <<- LtUt
                          Xw <- list(...)$Xwts
                          Xwts <<- if (is.null(Xw)) rep.int(1, N) else as.numeric(Xw)
-                         Ptr <<- .Call(merPredDCreate, as(X, "matrix"), Lambdat,
-                                       LamtUt, Lind, RZX, Ut, Utr, V, VtV, Vtr,
-                                       Xwts, Zt, beta0, delb, delu, theta, u0)
                          updateXwts(Xwts)
                      },
                      CcNumer      = function() {
@@ -190,7 +187,25 @@ merPredD <-
                      ptr          = function() {
                          'returns the external pointer, regenerating if necessary'
                          if (length(theta)) {
+                             .Internal(inspect(Ptr))
                              if (.Call(isNullExtPtr, Ptr)) {
+                                 .Internal(inspect(theta))
+                                 .Internal(inspect(Lambdat))
+                                 .Internal(inspect(LamtUt))
+                                 .Internal(inspect(Lind))
+                                 .Internal(inspect(RZX))
+                                 .Internal(inspect(Ut))
+                                 .Internal(inspect(Utr))
+                                 .Internal(inspect(V))
+                                 .Internal(inspect(VtV))
+                                 .Internal(inspect(Vtr))
+                                 .Internal(inspect(Xwts))
+                                 .Internal(inspect(Zt))
+                                 .Internal(inspect(beta0))
+                                 .Internal(inspect(delb))
+                                 .Internal(inspect(delu))
+                                 .Internal(inspect(theta))
+                                 .Internal(inspect(u0))
                                  Ptr <<- .Call(merPredDCreate, as(X, "matrix"), Lambdat,
                                                LamtUt, Lind, RZX, Ut, Utr, V, VtV, Vtr,
                                                Xwts, Zt, beta0, delb, delu, theta, u0)
@@ -455,13 +470,19 @@ lmerResp <-
                          REML <<- as.integer(list(...)$REML)
                          if (length(REML) != 1L) REML <<- 0L
                          callSuper(...)
-                         Ptr <<- .Call(lmer_Create, y, weights, offset, mu, sqrtXwt,
-                                       sqrtrwt, wtres)
                      },
                      ptr        = function() {
                          'returns the external pointer, regenerating if necessary'
                          if (length(y)) {
+                             .Internal(inspect(Ptr))
                              if (.Call(isNullExtPtr, Ptr)) {
+                                 .Internal(inspect(y))
+                                 .Internal(inspect(weights))
+                                 .Internal(inspect(offset))
+                                 .Internal(inspect(mu))
+                                 .Internal(inspect(sqrtXwt))
+                                 .Internal(inspect(sqrtrwt))
+                                 .Internal(inspect(wtres))
                                  Ptr <<- .Call(lmer_Create, y, weights, offset, mu, sqrtXwt,
                                                sqrtrwt, wtres)
                                  .Call(lm_updateMu, Ptr, mu - offset)

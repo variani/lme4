@@ -52,9 +52,17 @@ namespace lme4 {
 		    << ", d_VtV.data() " << d_VtV.data()
 		    << ", d_Zt.valuePtr() " << d_Zt.valuePtr()
 		    << ", d_Ut.valuePtr() " << d_Ut.valuePtr()
+		    << std::endl
 		    << ", d_Lambdat.valuePtr() " << d_Lambdat.valuePtr()
 		    << ", d_theta.data() " << d_theta.data()
 		    << ", d_Vtr.data() " << d_Vtr.data()
+		    << ", d_Utr.data() " << d_Utr.data()
+		    << ", d_Xwts.data() " << d_Xwts.data()
+		    << std::endl
+		    << ", d_beta0.data() " << d_beta0.data()
+		    << ", d_delb.data() " << d_delu.data()
+		    << ", d_u0.data() " << d_u0.data()
+		    << ", d_Lind.data() " << d_u0.data()
 		    << std::endl;
 	if (d_N != d_Zt.cols())
 	    throw invalid_argument("Z dimension mismatch");
@@ -78,17 +86,14 @@ namespace lme4 {
 	// sparse/sparse matrix multiplication pruning zeros.  The
 	// Cholesky decomposition croaks if the structure of d_LamtUt changes.
 	MVec(d_LamtUt.valuePtr(), d_LamtUt.nonZeros()).setZero();
-	Rcpp::Rcout << "In updateLamtUt, d_LamtUt.valuePtr() " << d_LamtUt.valuePtr()
-		    << ", d_LamtUt.nonZeros() " << d_LamtUt.nonZeros()
-		    << ", d_Ut.outerSize() " << d_Ut.outerSize()
-		    << std::endl;
-	Rcpp::Rcout << "Size of Lambdat: " << d_Lambdat.rows()
+	Rcpp::Rcout << "In updateLamtUt:" << std::endl
+		    << "Size of Lambdat: " << d_Lambdat.rows()
 		    << " by " << d_Lambdat.cols()
-		    << ", nonzeros: " << d_Lambdat.nonZeros() << std::endl;
-	Rcpp::Rcout << "Size of Ut: " << d_Ut.rows()
+		    << ", nonzeros: " << d_Lambdat.nonZeros() << std::endl
+		    << "Size of Ut: " << d_Ut.rows()
 		    << " by " << d_Ut.cols()
-		    << ", nonzeros: " << d_Ut.nonZeros() << std::endl;
-	Rcpp::Rcout << "Size of LamtUt: " << d_LamtUt.rows()
+		    << ", nonzeros: " << d_Ut.nonZeros() << std::endl
+		    << "Size of LamtUt: " << d_LamtUt.rows()
 		    << " by " << d_LamtUt.cols()
 		    << ", nonzeros: " << d_LamtUt.nonZeros() << std::endl;
 
@@ -117,15 +122,12 @@ namespace lme4 {
 	Rcpp::Rcout << std::endl;
 
 	for (Index j = 0; j < d_Ut.outerSize(); ++j) {
-	    Rcpp::Rcout << "Ut.column = " << j << std::endl;
 	    for(MSpMatrixd::InnerIterator rhsIt(d_Ut, j); rhsIt; ++rhsIt) {
 		Scalar                        y(rhsIt.value());
 		Index                         k(rhsIt.index());
-		Rcpp::Rcout << " Ut row " << k << ", value " << y << std::endl;
 		MSpMatrixd::InnerIterator prdIt(d_LamtUt, j);
 		for (MSpMatrixd::InnerIterator lhsIt(d_Lambdat, k); lhsIt; ++lhsIt) {
 		    Index                     i = lhsIt.index();
-		    Rcpp::Rcout << " d_Lambdat inner iterator index " << i << std::endl;
 		    while (prdIt && prdIt.index() != i) ++prdIt;
 		    if (!prdIt) throw runtime_error("logic error in updateLamtUt");
 		    prdIt.valueRef()           += lhsIt.value() * y;
@@ -210,15 +212,13 @@ namespace lme4 {
 	int    *lipt = d_Lind.data();
 	Rcpp::Rcout << "d_Lind address " << lipt << std::endl;
 	Rcpp::Rcout << "d_Lind: " << lipt[0];
-	for (int ii = 1; ii < d_Lind.size(); ++ ii) Rcpp::Rcout << ", " << lipt[ii];
+	for (int ii = 1; ii < d_Lind.size(); ++ ii) Rcpp::Rcout << "," << lipt[ii];
 	Rcpp::Rcout << std::endl;
 	double *LamX = d_Lambdat.valuePtr(), *thpt = d_theta.data();
 	Rcpp::Rcout << "d_Lambdat.valuePtr() " << LamX << std::endl;
 	for (int i = 0; i < d_Lind.size(); ++i) {
-	    Rcpp::Rcout << (i > 0 ? ", " : "") << i;
 	    LamX[i] = thpt[lipt[i] - 1];
 	}
-	Rcpp::Rcout << std::endl;
     }
 
     merPredD::Scalar merPredD::solve() {
