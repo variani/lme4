@@ -1,11 +1,39 @@
 blme/lme4 notes
 ===============
 
-# What current blme implements
+The [`blme` package](http://cran.r-project.org/web/packages/blme/) by Vincent Dorie performs the useful task of imposing priors on the parameters of mixed-model fits executed by `lme4`. In particular, it allows for Wishart priors on the variance-covariance matrix of the random effects.
+
+# Classes of priors
+
+## Priors on variance-covariance parameters
+
+This should be the most straightforward case, since it can be handled without much loss of efficiency by simply wrapping the deviance function returned by `mkLmerDevfun` with a function that applies the prior.  In particular, after computing the deviance, one can reconstruct the variance-covariance matrix from the $\theta$ (Cholesky-factor) parameters and compute the (log-)prior probability.
+
+## Priors on GLMM fixed-effect parameters
+
+This should also be easy, since the fixed-effect parameters are not profiled out, at least in the second-stage optimization.  Provided that doing the first-stage optimization without the priors doesn't get us into trouble, we should be able to wrap the second-stage `devfun` in just the same way as we did for the variance-covariance parameters.  (This will be particularly nice e.g. for dealing with complete-separation issues: we should be able to implement a set of parameters that match those available in `arm::bayesglm`.)
+
+## Priors on LMM fixed-effect parameters
+
+### Normal priors
+
+This should be do-able by adding pseudo-data, although I'm not sure of the precise formula for adding pseudo-data without affecting any of the other aspects of the model?  Don't know whether this can be done at a top level or has to go deeper in the code.
+
+### Arbitrary priors
+
+In principle we should be able to do this by treating the linear problem as a GLMM and doing brute-force optimization over the $\beta$s rather than profiling them out; this would be considerably slower, especially for large $\beta$ vectors, but very flexible ... the only alternative as far as we know is bypassing the WRLSS mechanism entirely ...
+
+## Priors on scale parameters including residual $\sigma^2$ for LMMs
+
+This is tough (and it's hard to imagine a plausible use case ... independently quantified measurement error in a model with otherwise unidentifiable random effects?)
+
+## Priors on LMM fixed-effect parameters
+
+# What current `blme` implements
 
 Both linear and generalized linear mixed models are available.
 
-## Currently available covariance priors in blme
+## Currently available covariance priors in `blme`
 - none
   - flat prior
 - correlation
@@ -25,7 +53,7 @@ Both linear and generalized linear mixed models are available.
 ## Currently available common scale parameter priors in blme
 - seems like none are available, i.e. flat
 
-# Where to look in new lme4 for required changes
+# Where to look in new `lme4` for required changes
 
 1.  $\mathbf{R}_{X}^\top \mathbf{R}_{X} = \mathbf{V^\top V} - \mathbf{R}_{ZX}^\top \mathbf{R}_{ZX}$ gets changed to $\mathbf{R}_{X}^\top \mathbf{R}_{X} = \mathbf{V^\top V} + \mathbf{\Sigma_b}^{-1} - \mathbf{R}_{ZX}^\top \mathbf{R}_{ZX}$.  This happens in `predModule.cpp` in the `updateDecomp` function. Might want to think carefully about how to use the `rankUpdate` method here.  Can we spherize the fixed effects to make this simpler?  Maybe in the common scale case, we could really just pass fixed effects like we would random effects, but without updating the covariance parameters?
 
