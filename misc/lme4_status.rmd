@@ -1,0 +1,42 @@
+`lme4` status
+========================================================
+
+Version `r as.character(Sys.time())`
+
+## Targets
+
+* next two weeks (9-23 Jan): finish current writeups (GLMM procedure, RZX problem); finish BIRS proposal; maybe tackle another GLMM or NLMM issue (PWRSS failures?); maybe take a first shot at modularizing
+* 16 Jan or earlier: draft of BIRS proposal to MM/DB
+* 23 Jan or soon thereafter?: strategic Skype meeting with MM/DB
+
+## Publishable units
+* release of `lme4` unstable: ideally with working (non-fragile) GLMMs, but possibly as a fallback position with only LMMs fully supported
+ * fix GLMMs????
+ * get it working with downstream packages
+  * modularize model-fitting process
+  * coordinate with downstream package maintainers for more general issues (etc.)
+  * change or augment `devComp` to include a native-R implementation?
+* JRSS paper "#1": mostly written.  Update as necessary for any changes in computational structure or model interfaces. Update with more detailed information on GLMM fitting process? (Add SCW as co-author??)
+* JRSS paper "#2": unwritten. More information about API, extensions, tricks and techniques, etc. (profiling, bootstrapping, calculating local curvatures/Wald variance-covariance matrices, post-hoc MCMC sampling) -- see `lme4-extras` vignette (still on r-forge, not copied yet to github)
+* book:
+ * update for changes in package
+ * ?? add stuff from JRSS #1 and #2 (e.g. GLMM structure)
+ * blue-sky chapter??
+ 
+## glmer problem documentation
+ 
+ Preparatory to dumping things in DB/MM's lap and whining to them to fix RcppEigen so that it can handle them ...
+ 
+ * **fully** document the crabs/RZX problem.
+  * we have already (1) instrumented `lme4` to show that it fails at the initial Cholesky decomposition of "B" (i.e. constructing `RZX`) (2) written out and checked native-R construction of all of the bits leading up to `B` (3) shown that `Matrix::Cholesky` gives us a sensible answer for the decomposition.  We haven't (4) instrumented `lme4.0` to show it does the same thing (5) written a `base::chol` example to show that it gets the same answer as `Matrix::Cholesky (6) run `RcppEigen::solveInPlace` in a minimal code file outside of `lme4` (7) do a thorough writeup of what's going on, including a `.RData` file that has all the pieces saved in it (i.e. original data, `Z`, `X`, `B`, `RZX`, ...) [#4 and #6 are **not necessary**]
+* hopefully, ideally, if we can do it: diagnose and document an additional example (i.e. a PWRSS example)
+ * maybe use an `nlmer` example?  (algal example)
+ 
+## Level definitions
+
+We found this useful in discussing `lme4` issues
+
+* **Level I**: low-level computational/matrix representation stuff, i.e. what DB loves.  Julia, new `lme4` column-structured-branch stuff, etc.
+* **Level II**: PWRSS/step-halving etc.
+* **Level III**: optimization over $\theta$ and possibly $\beta$, using `nlminb`, `bobyqa`, etc. etc.. (e.g. Koller boundary-sticking problems)
+* **Level IV**: API, formula interface, profiling, modularization of $Z$, etc.
