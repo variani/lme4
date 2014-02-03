@@ -1,0 +1,90 @@
+# About
+
+It is a replication report from [https://github.com/lme4/lme4/blob/flexLambda/misc/ex_flexLambda.Rmd](https://github.com/lme4/lme4/blob/flexLambda/misc/ex_flexLambda.Rmd).
+
+# Include
+
+```{r}
+options(digits=3)
+
+library(devtools)
+library(ggplot2)
+library(mvtnorm)
+```
+
+```{r load_lme4, echo = FALSE, warnings = FALSE, message = FALSE, cache = TRUE}
+load_all("../../")
+#library(lme4)
+```
+
+```{r}
+packageVersion("lme4")
+```
+
+# Flexible Correlation Structures for Random Effects
+
+## Diagonal random effects:
+
+Uncorrelated random effects for different factor levels without having to manually specify
+dummies for each level:
+
+Example data: Different variances for different treatment levels
+
+```{r}
+## sim & plot data:
+set.seed(2323)
+nsubj <- 40
+nreps <- 5
+ntreat <- 3
+n <- ntreat*nsubj*nreps
+data <- expand.grid(treatment=factor(1:ntreat), 
+					reps=1:5, 
+					subject=factor(1:nsubj))
+
+sd.treat <- 1:ntreat
+sd.eps <- .5
+beta <- (3*1:ntreat)
+
+data <- within(data, {
+	mu <- model.matrix(~treatment, data)%*%beta + 
+		model.matrix(~0+subject:treatment, data) %*% rnorm(nsubj*ntreat, sd=rep(sd.treat, e=nsubj))
+	y <- mu + rnorm(n, sd=sd.eps)
+}) 
+```
+
+```{r}
+#p <- qplot(x=subject, y=y, col=treatment, data=data) + theme_bw() + coord_flip() 
+#p
+```
+
+Fit & check results (estimates overlaid as crosses):
+
+```{r}
+formula = y ~ treatment + d(~(0+treatment|subject))
+data = data
+specials = c("cs", "d", "ar1d")
+verbose = 0L
+```
+
+```{r}
+m <- flexLmer(y ~ treatment + d(~(0+treatment|subject)), data)
+```
+
+```{r, eval = FALSE}
+	#split off reGenerator terms:
+	frmlterms <- terms(formula, specials=specials)
+	termnames <- attr(frmlterms, "variables")
+	where.specials <- unlist(attr(frmlterms, "specials"))-1 #offset by one since response is counted
+	lmerformula <- formula(paste(formula[[2]], "~", 
+								 paste(attr(frmlterms, "term.labels")[-where.specials], collapse="+")))
+	reGenerators <- as.formula(paste("~",
+							paste(attr(frmlterms, "term.labels")[where.specials], collapse="+")))
+	# see example(modular)
+	lmod <- lFormula(lmerformula, data, reGenerators=reGenerators)
+```
+
+```{r, eval = FALSE}
+devfun <- do.call(mkLmerDevfun, lmod)
+opt <- Nelder_Mead(devfun, par = rep(1, lmod$reTrms$ntheta))
+mod <- mkMerMod(environment(devfun), opt, lmod$reTrms, fr = lmod$fr)
+```

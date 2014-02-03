@@ -1,3 +1,4 @@
+export(flexLmer)
 export(bootMer)
 export(devcomp)
 export(findbars)
