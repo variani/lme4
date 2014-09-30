@@ -27,6 +27,7 @@ namespace lme4 {
                  SEXP, 
 		 SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 
+	void             setTheta(const VectorXd&);
     };
 }
 
